@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #16232E;
+  --color-paper: #F7F5F0;
+  --color-ledger-green: #2F6E5B;
+  --color-drift-amber: #D98E3F;
+  --color-signal-rose: #B4483D;
+  --color-steel-blue: #3E6E96;
+  --color-hairline: #DCD8CF;
+  --color-ink-muted: #2C3B47;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #F7F5F0;
+  color: #16232E;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Focus rings */
+:focus-visible {
+  outline: 2px solid #3E6E96;
+  outline-offset: 2px;
+}
+
+/* Hide scrollbars until hovered */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: #DCD8CF;
+}

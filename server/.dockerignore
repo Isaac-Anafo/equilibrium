@@ -1,0 +1,13 @@
+.env
+.env.*
+.git
+.gitignore
+target
+docs
+node_modules
+client
+*.log
+.mvn
+mvnw
+mvnw.cmd
+run-local.ps1

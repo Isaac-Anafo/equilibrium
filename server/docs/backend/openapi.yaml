@@ -1,0 +1,677 @@
+openapi: 3.0.3
+info:
+  title: Equilibrium API
+  description: |
+    Portfolio-rebalancing platform backend. Serves the Equilibrium React frontend.
+    See 02-api-reference.md for the full narrative reference.
+  version: 1.0.0
+  contact:
+    name: Equilibrium Engineering
+
+servers:
+  - url: /api/v1
+    description: Same-origin (Vite proxy in dev, reverse proxy in prod)
+
+tags:
+  - name: Auth
+  - name: Portfolios
+  - name: Rebalance
+  - name: Analytics
+  - name: Notifications
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/signin:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Sign in with email + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '200':
+          description: Token pair + user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/signup:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Create an account (auto-login)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/google:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Exchange Google auth code for a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+                redirectUri: { type: string, format: uri }
+      responses:
+        '200':
+          description: Token pair + user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Rotate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Request password reset link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Always 200 to avoid enumeration
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Complete password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, minLength: 8 }
+      responses:
+        '204': { description: Password updated }
+
+  /portfolios:
+    post:
+      tags: [Portfolios]
+      summary: Create a portfolio (onboarding)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePortfolioRequest'
+      responses:
+        '201':
+          description: Portfolio created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Portfolio'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /portfolios/{id}/summary:
+    get:
+      tags: [Portfolios]
+      summary: Dashboard headline numbers
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          description: Portfolio summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioSummary'
+
+  /portfolios/{id}/holdings:
+    get:
+      tags: [Portfolios]
+      summary: Holdings with current/target weights and drift
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          description: Holdings rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HoldingsRow'
+
+  /portfolios/{id}/target-allocation:
+    get:
+      tags: [Portfolios]
+      summary: Read target allocation
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          description: Target allocation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetAllocation'
+    put:
+      tags: [Portfolios]
+      summary: Update target allocation (must sum to 100)
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TargetAllocation'
+      responses:
+        '200':
+          description: Saved allocation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetAllocation'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /portfolios/{id}/settings/drift-threshold:
+    get:
+      tags: [Portfolios]
+      summary: Read drift threshold
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriftThreshold'
+    put:
+      tags: [Portfolios]
+      summary: Update drift threshold (0.5–20)
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriftThreshold'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriftThreshold'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /portfolios/{id}/settings/auto-approve:
+    get:
+      tags: [Portfolios]
+      summary: Read auto-approve setting
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoApprove'
+    put:
+      tags: [Portfolios]
+      summary: Update auto-approve setting
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoApprove'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoApprove'
+
+  /portfolios/{id}/rebalance/proposals:
+    get:
+      tags: [Rebalance]
+      summary: Current proposed trades (empty when balanced)
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          description: Proposed trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProposedTrade'
+
+  /portfolios/{id}/rebalance/execute:
+    post:
+      tags: [Rebalance]
+      summary: Execute proposed trades (idempotent via requestId)
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId]
+              properties:
+                requestId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteResult'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /portfolios/{id}/rebalance/log:
+    get:
+      tags: [Rebalance]
+      summary: Rebalancing history
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          description: Rebalance events (newest first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RebalanceEvent'
+
+  /portfolios/{id}/performance:
+    get:
+      tags: [Analytics]
+      summary: Normalized performance series
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1M, 6M, 1Y, All]
+          description: Lookback window (default 1Y)
+      responses:
+        '200':
+          description: Chart points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChartPoint'
+
+  /portfolios/{id}/metrics:
+    get:
+      tags: [Analytics]
+      summary: Risk and return metrics
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          description: Metrics array
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Metric'
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Notification list (newest first)
+      responses:
+        '200':
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark all notifications read
+      responses:
+        '204': { description: All marked read }
+
+  /notifications/preferences:
+    get:
+      tags: [Notifications]
+      summary: Read notification preferences
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+    put:
+      tags: [Notifications]
+      summary: Update notification preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferences'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PortfolioId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Portfolio UUID
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid, or expired token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: State conflict (e.g. no proposals, stale write)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unprocessable:
+      description: Business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    User:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        displayName: { type: string, nullable: true }
+
+    AuthResponse:
+      type: object
+      required: [accessToken, refreshToken, expiresIn, tokenType, user]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn: { type: integer, example: 900 }
+        tokenType: { type: string, example: Bearer }
+        user: { $ref: '#/components/schemas/User' }
+
+    SignInRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    SignUpRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        displayName: { type: string, nullable: true }
+
+    CreatePortfolioRequest:
+      type: object
+      required: [name, riskProfile]
+      properties:
+        name: { type: string, maxLength: 120 }
+        riskProfile:
+          type: string
+          enum: [conservative, balanced, growth]
+        driftThreshold: { type: number, format: float, default: 3.5 }
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Holding'
+
+    Holding:
+      type: object
+      required: [ticker, price]
+      properties:
+        ticker: { type: string, example: VTI }
+        name: { type: string }
+        shares: { type: number, format: float }
+        price: { type: number, format: float }
+
+    Portfolio:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        riskProfile: { type: string }
+
+    PortfolioSummary:
+      type: object
+      required: [value, totalReturn, dayReturn, driftPct, threshold, asOf]
+      properties:
+        value: { type: number, format: double, example: 128390.0 }
+        totalReturn: { type: number, format: float, example: 6.4 }
+        dayReturn: { type: number, format: float, example: 1.2 }
+        driftPct: { type: number, format: float, example: 4.8 }
+        threshold: { type: number, format: float, example: 3.5 }
+        asOf: { type: string, format: date-time }
+
+    HoldingsRow:
+      type: object
+      required: [ticker, name, current, target, value, delta]
+      properties:
+        ticker: { type: string, example: VTI }
+        name: { type: string, example: Vanguard Total Market }
+        current: { type: number, format: float, example: 38.4 }
+        target: { type: number, format: float, example: 35.0 }
+        value: { type: number, format: double, example: 49277 }
+        delta: { type: number, format: float, example: 3.4 }
+
+    TargetAllocation:
+      type: object
+      required: [bonds, domestic, intl, real_estate]
+      properties:
+        bonds: { type: number, format: float, example: 40 }
+        domestic: { type: number, format: float, example: 40 }
+        intl: { type: number, format: float, example: 15 }
+        real_estate: { type: number, format: float, example: 5 }
+
+    DriftThreshold:
+      type: object
+      required: [threshold]
+      properties:
+        threshold: { type: number, format: float, example: 3.5 }
+
+    AutoApprove:
+      type: object
+      required: [autoApprove]
+      properties:
+        autoApprove: { type: boolean }
+
+    ProposedTrade:
+      type: object
+      required: [ticker, name, action, shares, amount, cost, rationale]
+      properties:
+        ticker: { type: string, example: VTI }
+        name: { type: string }
+        action: { type: string, enum: [Buy, Sell] }
+        shares: { type: number, format: float, example: 18.3 }
+        amount: { type: number, format: double, example: 4328 }
+        cost: { type: number, format: double, example: 3.5 }
+        rationale: { type: string }
+
+    ExecuteResult:
+      type: object
+      required: [executedTrades, totalAmount, totalCost, portfolioValue, event, positions]
+      properties:
+        executedTrades: { type: integer }
+        totalAmount: { type: number, format: double }
+        totalCost: { type: number, format: double }
+        portfolioValue: { type: number, format: double }
+        event: { $ref: '#/components/schemas/RebalanceEvent' }
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/HoldingsRow'
+
+    RebalanceEvent:
+      type: object
+      required: [date, trigger, trades, cost]
+      properties:
+        date: { type: string, example: '2026-07-15T14:30:00Z' }
+        trigger: { type: string, example: 'Approved rebalance' }
+        trades: { type: integer, example: 3 }
+        cost: { type: string, example: '$5.25' }
+
+    ChartPoint:
+      type: object
+      required: [date, portfolio, benchmark]
+      properties:
+        date: { type: string, example: 'Jul 13' }
+        portfolio: { type: number, format: float, example: 101.25 }
+        benchmark: { type: number, format: float, example: 100.31 }
+
+    Metric:
+      type: object
+      required: [key, label, value]
+      properties:
+        key: { type: string, example: sharpe }
+        label: { type: string, example: 'Sharpe ratio' }
+        value: { type: string, example: '1.34' }
+        gloss: { type: string, nullable: true }
+
+    Notification:
+      type: object
+      required: [id, type, text, time, unread]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [drift, trade, system] }
+        text: { type: string }
+        time: { type: string, format: date-time }
+        unread: { type: boolean }
+
+    NotificationPreferences:
+      type: object
+      required: [email, push]
+      properties:
+        email: { type: boolean }
+        push: { type: boolean }
+
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, status]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            status: { type: integer }
+            fieldErrors:
+              type: object
+              additionalProperties: { type: string }

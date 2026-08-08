@@ -1,0 +1,9 @@
+spring:
+  jpa:
+    show-sql: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+  pricing:
+    source: fixture

@@ -1,0 +1,25 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+client/.env
+client/.env.*
+!client/.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# Node / frontend build output
+client/node_modules/
+client/dist/
+client/.vite/
+
+# Java / backend build output
+server/target/
+server/.gradle/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
