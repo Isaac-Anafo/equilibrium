@@ -5,6 +5,10 @@ export interface ChatTurn {
   content: string
 }
 
+export function isAbortError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === 'AbortError'
+}
+
 function extractError(raw: string): string | null {
   try {
     const data = JSON.parse(raw)
@@ -19,6 +23,8 @@ export async function streamChat(
   message: string,
   history: ChatTurn[],
   onDelta: (chunk: string) => void,
+  signal?: AbortSignal,
+  onTruncated?: () => void,
 ): Promise<void> {
   const body = JSON.stringify({ message, history })
 
@@ -26,6 +32,7 @@ export async function streamChat(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body,
+    signal,
   })
 
   if (response.status === 401) {
@@ -35,6 +42,7 @@ export async function streamChat(
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${fresh}` },
         body,
+        signal,
       })
     }
   }
@@ -60,13 +68,17 @@ export async function streamChat(
       if (!dataLine) continue
       const payload = dataLine.slice(5).trim()
       if (payload === '[DONE]') return
-      let data: { delta?: string; done?: boolean; error?: string }
+      let data: { delta?: string; done?: boolean; error?: string; truncated?: boolean }
       try {
         data = JSON.parse(payload)
       } catch {
         continue
       }
       if (data.error) throw new Error(data.error)
+      if (data.truncated) {
+        onTruncated?.()
+        return
+      }
       if (data.done) return
       if (data.delta) onDelta(data.delta)
     }

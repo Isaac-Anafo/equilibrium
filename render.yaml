@@ -36,4 +36,6 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
-        value: gpt-4o-mini
+        value: llama-3.1-8b-instant
+      - key: CHAT_BASE_URL
+        value: https://api.groq.com/openai/v1/chat/completions

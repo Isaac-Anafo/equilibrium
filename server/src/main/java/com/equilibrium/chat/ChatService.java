@@ -21,12 +21,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
-    private static final String COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
     private static final int MAX_HISTORY_MESSAGES = 20;
 
     private static final String BASE_PROMPT = """
@@ -67,17 +67,20 @@ public class ChatService {
     private final boolean enabled;
     private final String apiKey;
     private final String model;
+    private final String baseUrl;
 
     public ChatService(ChatContextService contextService,
                        ObjectMapper objectMapper,
                        @Value("${app.chat.enabled:false}") boolean enabled,
                        @Value("${app.chat.api-key:}") String apiKey,
-                       @Value("${app.chat.model:gpt-4o-mini}") String model) {
+                       @Value("${app.chat.model:gpt-4o-mini}") String model,
+                       @Value("${app.chat.base-url:https://api.openai.com/v1/chat/completions}") String baseUrl) {
         this.contextService = contextService;
         this.objectMapper = objectMapper;
         this.enabled = enabled;
         this.apiKey = apiKey;
         this.model = model;
+        this.baseUrl = baseUrl;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -90,6 +93,51 @@ public class ChatService {
             return;
         }
 
+        String json = objectMapper.writeValueAsString(bodyFor(userId, request));
+
+        HttpRequest httpRequest = buildRequest(json);
+        HttpResponse<java.util.stream.Stream<String>> response =
+                httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofLines());
+
+        if (response.statusCode() != 200) {
+            String errorBody = response.body().collect(Collectors.joining());
+            log.error("Chat request failed with status {}: {}", response.statusCode(), errorBody);
+            sendEvent(emitter, Map.of("error", "The chat service returned an error. Please try again."));
+            return;
+        }
+
+        boolean truncated = false;
+        Iterator<String> lines = response.body().iterator();
+        while (lines.hasNext()) {
+            Chunk chunk = parseLine(lines.next());
+            if (chunk.delta() != null && !chunk.delta().isEmpty()) {
+                emitter.send(SseEmitter.event().data(Map.of("delta", chunk.delta()), MediaType.APPLICATION_JSON));
+            }
+            if (chunk.truncated()) {
+                truncated = true;
+            }
+            if (chunk.done()) {
+                break;
+            }
+        }
+        if (truncated) {
+            emitter.send(SseEmitter.event().data(Map.of("truncated", true), MediaType.APPLICATION_JSON));
+        }
+        emitter.send(SseEmitter.event().data(Map.of("done", true), MediaType.APPLICATION_JSON));
+        emitter.complete();
+    }
+
+    private Map<String, Object> bodyFor(UUID userId, ChatDtos.ChatRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", model);
+        body.put("stream", true);
+        body.put("temperature", 0.4);
+        body.put("max_tokens", 700);
+        body.put("messages", messagesFor(userId, request));
+        return body;
+    }
+
+    List<Map<String, String>> messagesFor(UUID userId, ChatDtos.ChatRequest request) {
         List<Map<String, String>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt(userId)));
         if (request.history() != null) {
@@ -104,55 +152,42 @@ public class ChatService {
             }
         }
         messages.add(Map.of("role", "user", "content", request.message()));
+        return messages;
+    }
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("model", model);
-        body.put("stream", true);
-        body.put("temperature", 0.4);
-        body.put("max_tokens", 700);
-        body.put("messages", messages);
-        String json = objectMapper.writeValueAsString(body);
-
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(URI.create(COMPLETIONS_URL))
+    HttpRequest buildRequest(String json) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl))
                 .timeout(Duration.ofMinutes(2))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
+    }
 
-        HttpResponse<java.util.stream.Stream<String>> response =
-                httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofLines());
-
-        if (response.statusCode() != 200) {
-            String errorBody = response.body().collect(Collectors.joining());
-            log.error("OpenAI request failed with status {}: {}", response.statusCode(), errorBody);
-            sendEvent(emitter, Map.of("error", "The chat service returned an error. Please try again."));
-            return;
+    Chunk parseLine(String line) {
+        if (line == null || !line.startsWith("data:")) {
+            return new Chunk(null, false, false);
         }
-
-        Iterator<String> lines = response.body().iterator();
-        while (lines.hasNext()) {
-            String line = lines.next();
-            if (line == null || !line.startsWith("data:")) {
-                continue;
-            }
-            String payload = line.substring(5).trim();
-            if (payload.equals("[DONE]")) {
-                break;
-            }
+        String payload = line.substring(5).trim();
+        if (payload.equals("[DONE]")) {
+            return new Chunk(null, false, true);
+        }
+        try {
             JsonNode node = objectMapper.readTree(payload);
             JsonNode content = node.path("choices").path(0).path("delta").path("content");
-            if (content.isTextual() && !content.asText().isEmpty()) {
-                emitter.send(SseEmitter.event().data(Map.of("delta", content.asText()), MediaType.APPLICATION_JSON));
-            }
             JsonNode finish = node.path("choices").path(0).path("finish_reason");
-            if (finish.isTextual() && finish.asText().equals("stop")) {
-                break;
-            }
+            return new Chunk(
+                    content.isTextual() ? content.asText() : null,
+                    finish.isTextual() && finish.asText().equals("length"),
+                    false);
+        } catch (Exception e) {
+            log.warn("Skipping malformed SSE chunk", e);
+            return new Chunk(null, false, false);
         }
-        emitter.send(SseEmitter.event().data(Map.of("done", true), MediaType.APPLICATION_JSON));
-        emitter.complete();
+    }
+
+    record Chunk(String delta, boolean truncated, boolean done) {
     }
 
     private String systemPrompt(UUID userId) {

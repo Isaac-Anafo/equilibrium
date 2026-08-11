@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { streamChat, type ChatTurn } from '../lib/chat'
+import { isAbortError, streamChat, type ChatTurn } from '../lib/chat'
 import { useAuth } from '../state/auth'
 
 interface Message extends ChatTurn {
@@ -21,6 +21,17 @@ export default function ChatWidget() {
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const cancelStream = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
+  }
+
+  const handleClose = () => {
+    cancelStream()
+    setOpen(false)
+  }
 
   useEffect(() => {
     const el = scrollRef.current
@@ -39,16 +50,42 @@ export default function ChatWidget() {
       .map((m) => ({ role: m.role, content: m.content }))
     setMessages((prev) => [...prev, { role: 'user', content }])
     setStreaming(true)
+    const controller = new AbortController()
+    abortRef.current = controller
+    let trimmed = false
     try {
-      await streamChat(content, history, (chunk) => {
+      await streamChat(
+        content,
+        history,
+        (chunk) => {
+          setMessages((prev) => {
+            const next = [...prev]
+            const last = next[next.length - 1]
+            if (last.role === 'assistant' && !last.error) {
+              next[next.length - 1] = { ...last, content: last.content + chunk }
+            } else {
+              next.push({ role: 'assistant', content: chunk })
+            }
+            return next
+          })
+        },
+        controller.signal,
+        () => {
+          trimmed = true
+        },
+      )
+      if (trimmed) {
         setMessages((prev) => {
           const next = [...prev]
           const last = next[next.length - 1]
-          next[next.length - 1] = { ...last, content: last.content + chunk }
+          if (last.role === 'assistant') {
+            next[next.length - 1] = { ...last, content: `${last.content}\n\n(answer trimmed at the length limit)` }
+          }
           return next
         })
-      })
+      }
     } catch (err) {
+      if (isAbortError(err)) return
       const message = err instanceof Error ? err.message : 'Could not reach the chat assistant.'
       setMessages((prev) => {
         const next = [...prev]
@@ -61,6 +98,7 @@ export default function ChatWidget() {
         return next
       })
     } finally {
+      abortRef.current = null
       setStreaming(false)
     }
   }
@@ -68,7 +106,10 @@ export default function ChatWidget() {
   return (
     <>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (open) cancelStream()
+          setOpen((o) => !o)
+        }}
         aria-label={open ? 'Close chat assistant' : 'Open chat assistant'}
         aria-expanded={open}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#2F6E5B] text-white shadow-lg hover:bg-[#265e4d] active:bg-[#1e4e40] transition-colors duration-150 flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#3E6E96] focus-visible:ring-offset-2">
@@ -86,7 +127,7 @@ export default function ChatWidget() {
               <div className="text-sm font-medium font-display">Equilibrium Assistant</div>
               <div className="text-[10px] text-white/50 uppercase tracking-[0.06em] mt-0.5">Investing &amp; rebalancing help</div>
             </div>
-            <button onClick={() => setOpen(false)} aria-label="Close chat" className="text-white/50 hover:text-white transition-colors p-1 rounded-sm focus-visible:ring-2 focus-visible:ring-[#3E6E96]">
+            <button onClick={handleClose} aria-label="Close chat" className="text-white/50 hover:text-white transition-colors p-1 rounded-sm focus-visible:ring-2 focus-visible:ring-[#3E6E96]">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
             </button>
           </div>

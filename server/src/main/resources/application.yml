@@ -75,6 +75,7 @@ app:
     enabled: ${CHAT_ENABLED:false}
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_MODEL:gpt-4o-mini}
+    base-url: ${CHAT_BASE_URL:https://api.openai.com/v1/chat/completions}
 
   rebalance:
     auto-approve-max-amount: 500
