@@ -410,6 +410,34 @@ Response `200`: the saved preferences.
 
 ---
 
+## Chat
+
+### `POST /chat` — authenticated (stream)
+
+AI assistant. Streams a response as `text/event-stream`; each SSE event is a JSON payload
+(`data: { "delta": "…" }` for text chunks, `data: { "done": true }` at the end, or
+`data: { "error": "…" }` on failure). Requires `app.chat.enabled` + `OPENAI_API_KEY`; otherwise
+it streams a single `error` event.
+
+The server builds the system prompt from the app's rebalance/asset-class rules plus a snapshot
+of the caller's own portfolio (holdings, drift, target allocation, pending proposals, recent
+rebalance events) so answers can be personalized.
+
+Request:
+```json
+{
+  "message": "Should I rebalance?",
+  "history": [
+    { "role": "user", "content": "Is my portfolio balanced?" },
+    { "role": "assistant", "content": "Your portfolio has drifted 3.4%..." }
+  ]
+}
+```
+
+`history` is optional and capped at the last 20 messages. Rate-limited like auth endpoints.
+
+---
+
 ## Idempotency & concurrency
 
 - `POST /portfolios/{id}/rebalance/execute` is idempotent via the `requestId` in the request

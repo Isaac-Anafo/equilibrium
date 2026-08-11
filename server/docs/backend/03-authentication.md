@@ -91,7 +91,9 @@ React SPA                          Google                          Backend
 
 1. `POST /auth/forgot-password` — create a single-use `password_reset_tokens` row (hash
    stored, 30-min expiry), send a link to the email containing the raw token. Always `200`
-   (no enumeration). Email sending is out of scope for the mock (visual only).
+   (no enumeration). Sent via SMTP (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USERNAME`/`SMTP_PASSWORD`).
+   The link points at `{FRONTEND_URL}/reset-password?token=...`. If `SMTP_HOST` is blank the
+   reset link is logged server-side instead of emailed (local/dev fallback).
 2. `POST /auth/reset-password` — verify hash + expiry, `BCrypt` the new password, revoke the
    token, and revoke all refresh tokens for the user (forces re-login everywhere).
 

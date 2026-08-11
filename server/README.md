@@ -18,7 +18,7 @@ DB_USERNAME=<db-user>
 DB_PASSWORD=<db-password>
 JWT_SECRET=<random-long-secret>
 PORT=8080
-CORS_ORIGINS=http://localhost:5173,http://localhost:8443,https://your-frontend-domain.vercel.app
+CORS_ORIGINS=http://localhost:5173,http://localhost:8443,https://equilibrium-umber.vercel.app
 ```
 
 ## Production deployment (Render / Docker)

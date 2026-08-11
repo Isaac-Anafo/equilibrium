@@ -21,7 +21,7 @@ VITE_API_BASE_URL=http://localhost:8080/api/v1
 
 1. Import the `client` folder into Vercel.
 2. Set the environment variable:
-   - `VITE_API_BASE_URL=https://your-backend.onrender.com/api/v1`
+   - `VITE_API_BASE_URL=https://equilibrium-x5b4.onrender.com/api/v1`
 3. Build command:
    - `npm run build`
 4. Output directory:

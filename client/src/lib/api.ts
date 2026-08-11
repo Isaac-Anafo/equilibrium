@@ -29,9 +29,14 @@ function clearAuthStorage() {
   writeStorage(REFRESH_KEY, null)
 }
 
+export function authHeaders(): Record<string, string> {
+  const token = readToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 let refreshing: Promise<string | null> | null = null
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   if (!refreshing) {
     refreshing = (async () => {
       const refreshToken = readStorage(REFRESH_KEY)

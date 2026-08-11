@@ -28,7 +28,7 @@ VITE_API_BASE_URL=http://localhost:8080/api/v1
 
 - Import the `client` folder as the app root in Vercel.
 - Set environment variable:
-  - `VITE_API_BASE_URL=https://your-backend.onrender.com/api/v1`
+  - `VITE_API_BASE_URL=https://equilibrium-x5b4.onrender.com/api/v1`
 - Build command: `npm run build`
 - Output directory: `dist`
 
@@ -50,7 +50,7 @@ DB_USERNAME=<db-user>
 DB_PASSWORD=<db-password>
 JWT_SECRET=<random-long-secret>
 PORT=8080
-CORS_ORIGINS=http://localhost:5173,http://localhost:8443,https://your-frontend-domain.vercel.app
+CORS_ORIGINS=http://localhost:5173,http://localhost:8443,https://equilibrium-umber.vercel.app
 ```
 
 ### Production deployment (Render / Docker)
@@ -66,7 +66,7 @@ Deploy steps:
    - `DB_USERNAME`
    - `DB_PASSWORD`
    - `JWT_SECRET` (required — no default; the app refuses to start without a secret >= 32 bytes)
-   - `CORS_ORIGINS=https://your-frontend-domain.vercel.app`
+   - `CORS_ORIGINS=https://equilibrium-umber.vercel.app`
    - `PRICE_SOURCE` (optional, default `fixture`)
    - `PORT` is injected by Render automatically.
 4. For manual (non-blueprint) deploys, set **Root Directory = `server`** and **Health Check Path = `/api/v1/health`** in the service settings.

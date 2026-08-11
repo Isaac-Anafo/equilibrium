@@ -16,6 +16,24 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGINS
-        sync: false
+        value: http://localhost:5173,http://localhost:8443,https://equilibrium-umber.vercel.app
       - key: PRICE_SOURCE
         value: fixture
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: FRONTEND_URL
+        value: https://equilibrium-umber.vercel.app
+      - key: CHAT_ENABLED
+        value: "true"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini

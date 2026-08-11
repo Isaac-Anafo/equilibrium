@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router'
 import { Logo } from '../components/ui'
+import ChatWidget from '../components/ChatWidget'
 import { useAuth } from '../state/auth'
 import { useNotifications } from '../state/notifications'
 
@@ -115,6 +116,7 @@ export default function AppLayout() {
       <Suspense fallback={<RouteFallback/>}>
         <Outlet/>
       </Suspense>
+      <ChatWidget/>
       <ScrollRestoration/>
     </div>
   )

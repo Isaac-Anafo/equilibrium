@@ -2,6 +2,7 @@ package com.equilibrium.auth;
 
 import com.equilibrium.common.ApiException;
 import com.equilibrium.common.ErrorCodes;
+import com.equilibrium.notification.EmailService;
 import com.equilibrium.notification.NotificationPreference;
 import com.equilibrium.notification.NotificationPreferenceRepository;
 import org.slf4j.Logger;
@@ -31,9 +32,11 @@ public class AuthService {
     private final NotificationPreferenceRepository preferenceRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final EmailService emailService;
     private final SecureRandom secureRandom = new SecureRandom();
     private final long refreshTtlDays;
     private final long resetTtlMinutes;
+    private final String resetLinkBaseUrl;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -41,16 +44,20 @@ public class AuthService {
                        NotificationPreferenceRepository preferenceRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
+                       EmailService emailService,
                        @Value("${app.jwt.refresh-ttl-days:30}") long refreshTtlDays,
-                       @Value("${app.auth.reset-token-ttl-minutes:30}") long resetTtlMinutes) {
+                       @Value("${app.auth.reset-token-ttl-minutes:30}") long resetTtlMinutes,
+                       @Value("${app.auth.reset-link-base-url:http://localhost:8443}") String resetLinkBaseUrl) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.preferenceRepository = preferenceRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.emailService = emailService;
         this.refreshTtlDays = refreshTtlDays;
         this.resetTtlMinutes = resetTtlMinutes;
+        this.resetLinkBaseUrl = resetLinkBaseUrl;
     }
 
     @Transactional
@@ -137,6 +144,7 @@ public class AuthService {
             token.setExpiresAt(OffsetDateTime.now().plusMinutes(resetTtlMinutes));
             resetTokenRepository.save(token);
             log.info("Password reset token for {}: {}", email, raw);
+            emailService.sendPasswordReset(user.getEmail(), resetLinkBaseUrl + "/reset-password?token=" + raw);
         });
         return new AuthDtos.MessageResponse("If an account exists, a reset link has been sent.");
     }

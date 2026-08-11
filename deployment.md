@@ -104,7 +104,7 @@ Render injects `PORT` automatically. Add the rest in **Environment** under the s
 | `DB_USERNAME` | yes | Neon database user (e.g. `neondb_owner`) |
 | `DB_PASSWORD` | yes | Neon database password |
 | `JWT_SECRET` | yes | The fresh secret you generated in step 2 (≥ 32 bytes) |
-| `CORS_ORIGINS` | yes | `https://<your-client>.vercel.app` — add the Vercel frontend domain; add `http://localhost:5173,http://localhost:8443` too if you want to test against production locally |
+| `CORS_ORIGINS` | yes | `https://equilibrium-umber.vercel.app` — add the Vercel frontend domain; add `http://localhost:5173,http://localhost:8443` too if you want to test against production locally |
 | `PRICE_SOURCE` | no | `fixture` (default). Leave unset unless you have a real price feed |
 
 > In the blueprint, these are declared with `sync: false`, which means Render creates them blank and **you fill in the values in the dashboard** — no secrets live in `render.yaml`.
@@ -120,7 +120,7 @@ Render injects `PORT` automatically. Add the rest in **Environment** under the s
 
 ### 4.4 Copy the backend URL
 
-After deploy you get a URL like `https://equilibrium-server.onrender.com`. You'll use it in the frontend step.
+After deploy you get a URL like `https://equilibrium-x5b4.onrender.com`. You'll use it in the frontend step.
 
 ---
 
@@ -133,7 +133,7 @@ After deploy you get a URL like `https://equilibrium-server.onrender.com`. You'l
 
    | Variable | Value |
    | --- | --- |
-   | `VITE_API_BASE_URL` | `https://<your-backend>.onrender.com/api/v1` |
+   | `VITE_API_BASE_URL` | `https://equilibrium-x5b4.onrender.com/api/v1` |
 
    > `VITE_` vars are inlined at **build time**, so set it before the first build. If it's missing, the client falls back to `http://localhost:8081/api/v1`, which won't work in production.
 5. **Build Command:** `npm run build`
@@ -147,7 +147,7 @@ After deploy you get a URL like `https://equilibrium-server.onrender.com`. You'l
 
 The backend only accepts requests from origins listed in `CORS_ORIGINS`. After the frontend deploys, confirm:
 
-- `CORS_ORIGINS` on Render includes `https://<your-client>.vercel.app` (exactly, no trailing slash).
+- `CORS_ORIGINS` on Render includes `https://equilibrium-umber.vercel.app` (exactly, no trailing slash).
 
 If you get CORS errors in the browser console, this is the first thing to check.
 
@@ -160,16 +160,16 @@ Run these once the backend is live:
 1. **Health check** — should return `200`:
 
    ```bash
-   curl https://<your-backend>.onrender.com/api/v1/health
+   curl https://equilibrium-x5b4.onrender.com/api/v1/health
    # {"status":"UP","database":"UP"}
    ```
 
-2. **API docs** — open `https://<your-backend>.onrender.com/swagger-ui.html` (public).
+2. **API docs** — open `https://equilibrium-x5b4.onrender.com/swagger-ui.html` (public).
 
 3. **Create an account** — sign up via the public endpoint:
 
    ```bash
-   curl -X POST https://<your-backend>.onrender.com/api/v1/auth/signup \
+   curl -X POST https://equilibrium-x5b4.onrender.com/api/v1/auth/signup \
      -H "Content-Type: application/json" \
      -d '{"email":"you@example.com","password":"a-strong-password-123","displayName":"You"}'
    ```
@@ -213,4 +213,4 @@ Run these once the backend is live:
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | yes | `https://<backend>.onrender.com/api/v1`, inlined at build time |
+| `VITE_API_BASE_URL` | yes | `https://equilibrium-x5b4.onrender.com/api/v1`, inlined at build time |

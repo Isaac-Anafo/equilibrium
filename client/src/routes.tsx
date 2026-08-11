@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate, useLocation } from 'react-router'
 import AppLayout from './layouts/AppLayout'
 import SignIn from './pages/SignIn'
 import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Legal from './pages/Legal'
 import NotFound from './pages/NotFound'
 import OnboardingLayout from './pages/onboarding/OnboardingLayout'
@@ -31,6 +32,7 @@ function ProtectedLayout() {
 export const router = createBrowserRouter([
   { path: '/', Component: SignIn },
   { path: '/forgot-password', Component: ForgotPassword },
+  { path: '/reset-password', Component: ResetPassword },
   { path: '/legal/:topic', Component: Legal },
   {
     path: '/onboarding',
