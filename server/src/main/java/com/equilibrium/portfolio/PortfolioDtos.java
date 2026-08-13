@@ -56,4 +56,7 @@ public final class PortfolioDtos {
 
     public record AutoApproveRequest(@NotNull Boolean autoApprove) {
     }
+
+    public record ActivityView(String date, String type, String summary) {
+    }
 }

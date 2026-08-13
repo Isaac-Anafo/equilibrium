@@ -34,6 +34,11 @@ public class NotificationService {
         notificationRepository.markAllRead(userId);
     }
 
+    @Transactional
+    public void read(UUID userId, UUID notificationId) {
+        notificationRepository.markRead(notificationId, userId);
+    }
+
     @Transactional(readOnly = true)
     public NotificationDtos.PreferencesView getPreferences(UUID userId) {
         NotificationPreference prefs = preferenceRepository.findByUserId(userId)

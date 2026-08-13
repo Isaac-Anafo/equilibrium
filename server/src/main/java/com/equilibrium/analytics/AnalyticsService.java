@@ -219,13 +219,13 @@ public class AnalyticsService {
         }
         return List.of(
                 new AnalyticsDtos.MetricView("sharpe", "Sharpe ratio", fmt(sharpe, 2),
-                        "Return earned per unit of risk taken. Higher is better."),
+                        "Return earned per unit of risk taken. It measures how much extra return you get for each unit of volatility (ups and downs) you tolerate. A higher number means the portfolio is rewarding you well for the swings it goes through. Above 1 is considered good; above 2 is very good; below 0 means it lost money over the period."),
                 new AnalyticsDtos.MetricView("sortino", "Sortino ratio", fmt(sortino, 2),
-                        "Like Sharpe, but only penalises downside volatility."),
+                        "Like the Sharpe ratio, but it only counts the downside (loss-making) movements as risk. Good returns earned without big drops score higher. A higher number means smoother gains and less exposure to sharp falls, which is safer for you."),
                 new AnalyticsDtos.MetricView("vol", "Volatility", pct(annualVol, 1),
-                        "Annualised standard deviation of monthly returns."),
+                        "How much the portfolio value swings up and down, expressed as an annualised percentage. It is the standard deviation of the daily returns scaled to a year. Lower volatility means a smoother, more predictable ride; higher volatility means bigger swings and more uncertainty."),
                 new AnalyticsDtos.MetricView("drawdown", "Max drawdown", pct(maxDrawdown, 1),
-                        "Largest peak-to-trough decline in the period."));
+                        "The largest peak-to-trough decline in the period - your worst 'how far it fell from its high' moment. It shows the most you could have been down at any single point. A smaller (less negative) number means the portfolio held up better during rough patches."));
     }
 
     private String fmt(double value, int scale) {

@@ -160,6 +160,7 @@ See [04-rebalance-engine.md](04-rebalance-engine.md) for the algorithm.
 | `POST` | `/api/v1/portfolios` | Create portfolio (onboarding) |
 | `GET` | `/api/v1/portfolios/{id}/summary` | Dashboard headline numbers |
 | `GET` | `/api/v1/portfolios/{id}/holdings` | Holdings rows (drift table) |
+| `GET` | `/api/v1/portfolios/{id}/activity` | Compiled change history |
 | `GET` | `/api/v1/portfolios/{id}/target-allocation` | Read target allocation |
 | `PUT` | `/api/v1/portfolios/{id}/target-allocation` | Update target allocation |
 | `GET` | `/api/v1/portfolios/{id}/settings/drift-threshold` | Read threshold |
@@ -172,6 +173,7 @@ See [04-rebalance-engine.md](04-rebalance-engine.md) for the algorithm.
 | `GET` | `/api/v1/portfolios/{id}/performance?range=` | Performance series |
 | `GET` | `/api/v1/portfolios/{id}/metrics` | Risk metrics |
 | `GET` | `/api/v1/notifications` | Notification list |
+| `POST` | `/api/v1/notifications/{id}/read` | Mark one read |
 | `POST` | `/api/v1/notifications/read-all` | Mark all read |
 | `GET` | `/api/v1/notifications/preferences` | Read notification prefs |
 | `PUT` | `/api/v1/notifications/preferences` | Update notification prefs |

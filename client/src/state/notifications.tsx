@@ -13,6 +13,7 @@ export interface Notif {
 interface NotifStore {
   notifs: Notif[]
   unread: number
+  markRead: (id: string) => void
   markAllRead: () => void
   push: (n: Notif) => void
 }
@@ -41,6 +42,20 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       })
   }, [token])
 
+  const markRead = useCallback((id: string) => {
+    setNotifs((ns) => {
+      const target = ns.find((n) => n.id === id)
+      if (!target || !target.unread) return ns
+      return ns.map((n) => (n.id === id ? { ...n, unread: false } : n))
+    })
+    const token = (() => {
+      try { return localStorage.getItem('equilibrium.auth.token') }
+      catch { return null }
+    })()
+    if (!token) return
+    void apiFetch(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }).catch(() => {})
+  }, [])
+
   const markAllRead = useCallback(() => {
     setNotifs((ns) => ns.map((n) => (n.unread ? { ...n, unread: false } : n)))
     const token = (() => {
@@ -53,8 +68,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   const push = useCallback((n: Notif) => setNotifs((ns) => [n, ...ns]), [])
   const value = useMemo(
-    () => ({ notifs, unread: notifs.reduce((n, x) => n + (x.unread ? 1 : 0), 0), markAllRead, push }),
-    [notifs, markAllRead, push],
+    () => ({ notifs, unread: notifs.reduce((n, x) => n + (x.unread ? 1 : 0), 0), markRead, markAllRead, push }),
+    [notifs, markRead, markAllRead, push],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

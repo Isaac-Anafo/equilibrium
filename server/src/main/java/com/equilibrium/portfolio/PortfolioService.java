@@ -33,6 +33,7 @@ public class PortfolioService {
     private final PositionPriceRepository priceRepository;
     private final PortfolioAccessGuard accessGuard;
     private final NotificationService notificationService;
+    private final PortfolioActivityService activityService;
 
     public PortfolioService(PortfolioRepository portfolioRepository,
                             PositionRepository positionRepository,
@@ -40,7 +41,8 @@ public class PortfolioService {
                             UserRepository userRepository,
                             PositionPriceRepository priceRepository,
                             PortfolioAccessGuard accessGuard,
-                            NotificationService notificationService) {
+                            NotificationService notificationService,
+                            PortfolioActivityService activityService) {
         this.portfolioRepository = portfolioRepository;
         this.positionRepository = positionRepository;
         this.allocationRepository = allocationRepository;
@@ -48,6 +50,7 @@ public class PortfolioService {
         this.priceRepository = priceRepository;
         this.accessGuard = accessGuard;
         this.notificationService = notificationService;
+        this.activityService = activityService;
     }
 
     @Transactional
@@ -163,6 +166,9 @@ public class PortfolioService {
         allocation.setRealEstate(request.realEstate());
         allocationRepository.save(allocation);
         maybeEmitDriftNotification(portfolio, allocation);
+        activityService.record(portfolio, PortfolioActivityType.ALLOCATION,
+                "Updated target allocation to " + allocation.getBonds() + "/" + allocation.getDomestic()
+                        + "/" + allocation.getIntl() + "/" + allocation.getRealEstate() + ".");
         return toView(allocation);
     }
 
@@ -185,6 +191,8 @@ public class PortfolioService {
         portfolio.setDriftThreshold(threshold);
         portfolioRepository.save(portfolio);
         maybeEmitDriftNotification(portfolio, requireAllocation(portfolio));
+        activityService.record(portfolio, PortfolioActivityType.THRESHOLD,
+                "Changed drift threshold to " + threshold + "%.");
         return new PortfolioDtos.ThresholdView(portfolio.getDriftThreshold());
     }
 
@@ -200,6 +208,10 @@ public class PortfolioService {
         Portfolio portfolio = accessGuard.requireOwner(portfolioId, userId);
         portfolio.setAutoApprove(Boolean.TRUE.equals(request.autoApprove()));
         portfolioRepository.save(portfolio);
+        activityService.record(portfolio, PortfolioActivityType.AUTO_APPROVE,
+                Boolean.TRUE.equals(request.autoApprove())
+                        ? "Enabled auto-approve for trades under $500."
+                        : "Disabled auto-approve for trades under $500.");
         return new PortfolioDtos.AutoApproveView(portfolio.isAutoApprove());
     }
 

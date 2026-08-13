@@ -21,6 +21,9 @@ export interface ProposedTrade {
 export interface RebalanceEvent {
   date: string; trigger: string; trades: number; cost: string
 }
+export interface ActivityEvent {
+  date: string; type: 'rebalance' | 'threshold' | 'allocation' | 'auto_approve' | string; summary: string
+}
 export interface TargetAllocation {
   bonds: number; domestic: number; intl: number; real_estate: number
 }

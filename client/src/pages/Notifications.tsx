@@ -31,7 +31,7 @@ function parseTime(time: string): { group: 'Today' | 'Earlier'; label: string } 
 }
 
 export default function Notifications() {
-  const { notifs, unread, markAllRead } = useNotifications()
+  const { notifs, unread, markRead, markAllRead } = useNotifications()
   const groups = useMemo(() => {
     const today: Array<Notif & { label: string }> = []
     const past: Array<Notif & { label: string }> = []
@@ -67,7 +67,17 @@ export default function Notifications() {
             <div className="text-[10px] uppercase tracking-[0.1em] text-[#16232E]/35 mb-3">{g.label}</div>
             <div className="bg-white border border-[#DCD8CF] rounded-sm overflow-hidden divide-y divide-[#DCD8CF]/60">
               {g.items.map((n) => (
-                <div key={n.id} className={`flex items-start gap-3.5 px-4 py-3.5 hover:bg-[#16232E]/[0.015] transition-colors ${n.unread ? 'bg-[#3E6E96]/[0.02]' : ''}`}>
+                <div
+                  key={n.id}
+                  onClick={n.unread ? () => markRead(n.id) : undefined}
+                  title={n.unread ? 'Mark as read' : undefined}
+                  role={n.unread ? 'button' : undefined}
+                  tabIndex={n.unread ? 0 : undefined}
+                  onKeyDown={n.unread ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); markRead(n.id) } } : undefined}
+                  className={`flex items-start gap-3.5 px-4 py-3.5 transition-colors ${n.unread
+                    ? 'cursor-pointer bg-[#3E6E96]/[0.02] hover:bg-[#3E6E96]/[0.06]'
+                    : 'hover:bg-[#16232E]/[0.015]'}`}
+                >
                   <div className={`mt-0.5 flex-shrink-0 ${n.type === 'drift' ? 'text-[#D98E3F]' : n.type === 'trade' ? 'text-[#2F6E5B]' : 'text-[#16232E]/40'}`}>
                     {NOTIF_ICONS[n.type]}
                   </div>
@@ -75,7 +85,17 @@ export default function Notifications() {
                     <p className="text-sm text-[#16232E]/80 leading-snug">{n.text}</p>
                     <p className="text-[11px] text-[#16232E]/35 mt-1 font-mono">{n.label}</p>
                   </div>
-                  {n.unread && <div className="w-2 h-2 rounded-full bg-[#3E6E96] flex-shrink-0 mt-1.5" aria-label="Unread"/>}
+                  {n.unread ? (
+                    <div className="flex items-center gap-2.5 flex-shrink-0 mt-1.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); markRead(n.id) }}
+                        className="text-[11px] text-[#3E6E96] underline underline-offset-2 hover:no-underline"
+                      >
+                        Mark read
+                      </button>
+                      <div className="w-2 h-2 rounded-full bg-[#3E6E96]" aria-label="Unread" />
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

@@ -211,8 +211,24 @@ paths:
             application/json:
               schema:
                 type: array
+                  items:
+                    $ref: '#/components/schemas/HoldingsRow'
+
+  /portfolios/{id}/activity:
+    get:
+      tags: [Portfolios]
+      summary: Compiled change history (newest first)
+      parameters:
+        - $ref: '#/components/parameters/PortfolioId'
+      responses:
+        '200':
+          description: Portfolio activity (rebalances + strategy changes)
+          content:
+            application/json:
+              schema:
+                type: array
                 items:
-                  $ref: '#/components/schemas/HoldingsRow'
+                  $ref: '#/components/schemas/Activity'
 
   /portfolios/{id}/target-allocation:
     get:
@@ -426,6 +442,20 @@ paths:
       responses:
         '204': { description: All marked read }
 
+  /notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark a single notification read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204': { description: Marked read }
+
   /notifications/preferences:
     get:
       tags: [Notifications]
@@ -626,6 +656,14 @@ components:
         trigger: { type: string, example: 'Approved rebalance' }
         trades: { type: integer, example: 3 }
         cost: { type: string, example: '$5.25' }
+
+    Activity:
+      type: object
+      required: [date, type, summary]
+      properties:
+        date: { type: string, example: '2026-08-13T14:30:00Z' }
+        type: { type: string, enum: [rebalance, threshold, allocation, auto_approve], example: allocation }
+        summary: { type: string, example: 'Updated target allocation to 35/40/20/5.' }
 
     ChartPoint:
       type: object

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../lib/api'
-import type { ChartPoint, HoldingsRow, ProposedTrade, RebalanceEvent, TargetAllocation } from '../data/portfolio'
+import type { ChartPoint, HoldingsRow, ProposedTrade, RebalanceEvent, TargetAllocation, ActivityEvent } from '../data/portfolio'
 import { useAuth } from './auth'
 
 export interface MetricView { key: string; label: string; value: string; gloss: string }
@@ -16,6 +16,7 @@ export interface PortfolioState {
   holdings: HoldingsRow[]
   proposedTrades: ProposedTrade[]
   rebalanceLog: RebalanceEvent[]
+  activityLog: ActivityEvent[]
   autoApprove: boolean
   allocation: TargetAllocation
   notifPrefs: { email: boolean; push: boolean }
@@ -58,6 +59,7 @@ function emptyState(): PortfolioState {
     holdings: [],
     proposedTrades: [],
     rebalanceLog: [],
+    activityLog: [],
     autoApprove: false,
     allocation: { bonds: 40, domestic: 40, intl: 15, real_estate: 5 },
     notifPrefs: { email: true, push: false },
@@ -70,6 +72,10 @@ function nowLabel() {
   const h = d.getHours()
   const hh = h % 12 || 12
   return `Today, ${hh}:${String(d.getMinutes()).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`
+}
+
+function nowActivity(type: ActivityEvent['type'], summary: string): ActivityEvent {
+  return { date: new Date().toISOString(), type, summary }
 }
 
 function buildLocalExecution(s: PortfolioState): Partial<PortfolioState> {
@@ -91,7 +97,11 @@ function buildLocalExecution(s: PortfolioState): Partial<PortfolioState> {
     trades: trades.length,
     cost: `$${totalCost.toFixed(2)}`,
   }
-  return { value: total, holdings, driftPct, proposedTrades: [], rebalanceLog: [event, ...s.rebalanceLog] }
+  return {
+    value: total, holdings, driftPct, proposedTrades: [],
+    rebalanceLog: [event, ...s.rebalanceLog],
+    activityLog: [nowActivity('rebalance', `Rebalanced portfolio: ${trades.length} trade(s) executed, est. cost $${totalCost.toFixed(2)}.`), ...s.activityLog],
+  }
 }
 
 export function PortfolioProvider({ children }: { children: React.ReactNode }) {
@@ -189,6 +199,13 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
               rebalanceLog: log.map((ev) => ({ date: ev.date, trigger: ev.trigger, trades: Number(ev.trades), cost: ev.cost })),
             }))
           }),
+          apiFetch<Array<{ date: string; type: string; summary: string }>>('/portfolios/' + id + '/activity').then((log) => {
+            if (!active) return
+            setState((s) => ({
+              ...s,
+              activityLog: log.map((ev) => ({ date: ev.date, type: ev.type as ActivityEvent['type'], summary: ev.summary })),
+            }))
+          }),
           apiFetch<{ email: boolean; push: boolean }>('/notifications/preferences').then((p) => {
             if (!active) return
             setState((s) => ({ ...s, notifPrefs: { email: Boolean(p.email), push: Boolean(p.push) } }))
@@ -240,6 +257,10 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
                 { date: res.event.date, trigger: res.event.trigger, trades: Number(res.event.trades), cost: res.event.cost },
                 ...s2.rebalanceLog,
               ],
+              activityLog: [
+                nowActivity('rebalance', `Rebalanced portfolio: ${res.event.trades} trade(s) executed, est. cost ${res.event.cost}.`),
+                ...s2.activityLog,
+              ],
             }))
             return
           } catch {
@@ -253,6 +274,10 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     })
   }, [portfolioId])
 
+  const appendActivity = useCallback((type: ActivityEvent['type'], summary: string) => {
+    setState((s) => ({ ...s, activityLog: [nowActivity(type, summary), ...s.activityLog] }))
+  }, [])
+
   const setThreshold = useCallback(async (threshold: number) => {
     setState((s) => ({ ...s, threshold }))
     if (!portfolioId) return
@@ -261,10 +286,11 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         method: 'PUT',
         body: JSON.stringify({ threshold }),
       })
+      appendActivity('threshold', `Changed drift threshold to ${threshold}%.`)
     } catch {
       // keep local state update if the request fails
     }
-  }, [portfolioId])
+  }, [portfolioId, appendActivity])
 
   const setAutoApprove = useCallback(async (autoApprove: boolean) => {
     setState((s) => ({ ...s, autoApprove }))
@@ -274,10 +300,11 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         method: 'PUT',
         body: JSON.stringify({ autoApprove }),
       })
+      appendActivity('auto_approve', `${autoApprove ? 'Enabled' : 'Disabled'} auto-approve for trades under $500.`)
     } catch {
       // keep local state update if the request fails
     }
-  }, [portfolioId])
+  }, [portfolioId, appendActivity])
 
   const setAllocation = useCallback(async (allocation: TargetAllocation) => {
     setState((s) => ({ ...s, allocation }))
@@ -292,10 +319,11 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
           real_estate: Number(allocation.real_estate),
         }),
       })
+      appendActivity('allocation', `Updated target allocation to ${allocation.bonds}/${allocation.domestic}/${allocation.intl}/${allocation.real_estate}.`)
     } catch {
       // keep local state update if the request fails
     }
-  }, [portfolioId])
+  }, [portfolioId, appendActivity])
 
   const setNotifPrefs = useCallback((notifPrefs: { email: boolean; push: boolean }) => {
     setState((s) => ({ ...s, notifPrefs }))

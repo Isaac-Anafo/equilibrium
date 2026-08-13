@@ -4,6 +4,7 @@ import com.equilibrium.common.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,6 +34,12 @@ public class NotificationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void readAll() {
         notificationService.readAll(SecurityUtils.currentUserId());
+    }
+
+    @PostMapping("/{id}/read")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void read(@PathVariable UUID id) {
+        notificationService.read(SecurityUtils.currentUserId(), id);
     }
 
     @GetMapping("/preferences")

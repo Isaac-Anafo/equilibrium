@@ -20,9 +20,11 @@ import java.util.UUID;
 public class PortfolioController {
 
     private final PortfolioService portfolioService;
+    private final PortfolioActivityService activityService;
 
-    public PortfolioController(PortfolioService portfolioService) {
+    public PortfolioController(PortfolioService portfolioService, PortfolioActivityService activityService) {
         this.portfolioService = portfolioService;
+        this.activityService = activityService;
     }
 
     @PostMapping
@@ -39,6 +41,11 @@ public class PortfolioController {
     @GetMapping("/{id}/summary")
     public PortfolioDtos.SummaryResponse summary(@PathVariable UUID id) {
         return portfolioService.summary(SecurityUtils.currentUserId(), id);
+    }
+
+    @GetMapping("/{id}/activity")
+    public List<PortfolioDtos.ActivityView> activity(@PathVariable UUID id) {
+        return activityService.list(SecurityUtils.currentUserId(), id);
     }
 
     @GetMapping("/{id}/holdings")

@@ -7,6 +7,8 @@ import com.equilibrium.notification.NotificationType;
 import com.equilibrium.portfolio.DriftEngine;
 import com.equilibrium.portfolio.Portfolio;
 import com.equilibrium.portfolio.PortfolioAccessGuard;
+import com.equilibrium.portfolio.PortfolioActivityService;
+import com.equilibrium.portfolio.PortfolioActivityType;
 import com.equilibrium.portfolio.Position;
 import com.equilibrium.portfolio.PositionRepository;
 import com.equilibrium.portfolio.TargetAllocation;
@@ -36,6 +38,7 @@ public class RebalanceService {
     private final RebalanceEventRepository eventRepository;
     private final RebalanceExecutionRepository executionRepository;
     private final NotificationService notificationService;
+    private final PortfolioActivityService activityService;
     private final ObjectMapper objectMapper;
     private final BigDecimal commissionBps;
 
@@ -45,6 +48,7 @@ public class RebalanceService {
                             RebalanceEventRepository eventRepository,
                             RebalanceExecutionRepository executionRepository,
                             NotificationService notificationService,
+                            PortfolioActivityService activityService,
                             ObjectMapper objectMapper,
                             @Value("${app.rebalance.commission-bps:0}") int commissionBps) {
         this.accessGuard = accessGuard;
@@ -53,6 +57,7 @@ public class RebalanceService {
         this.eventRepository = eventRepository;
         this.executionRepository = executionRepository;
         this.notificationService = notificationService;
+        this.activityService = activityService;
         this.objectMapper = objectMapper;
         this.commissionBps = BigDecimal.valueOf(commissionBps);
     }
@@ -111,6 +116,11 @@ public class RebalanceService {
         event.setTrades(proposals.size());
         event.setCost(totalCost);
         eventRepository.save(event);
+
+        activityService.record(portfolio, PortfolioActivityType.REBALANCE,
+                "Rebalanced portfolio: " + proposals.size() + " trade(s) executed, "
+                        + totalAmount.setScale(2, RoundingMode.HALF_UP) + " moved, "
+                        + "est. cost $" + totalCost.setScale(2, RoundingMode.HALF_UP) + ".");
 
         notificationService.notify(portfolio.getUser().getId(), NotificationType.TRADE,
                 proposals.size() + " trades executed successfully. Portfolio rebalanced.");

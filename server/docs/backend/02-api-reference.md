@@ -205,6 +205,25 @@ Response `200` — array of `HoldingsRow` (sorted client-side; server returns by
 ]
 ```
 
+### `GET /portfolios/{id}/activity` — authenticated (owner)
+
+Compiled change history for the "Change history" timeline under the Analytics performance
+chart. Every user-driven change is recorded: rebalances, drift-threshold changes, target
+allocation updates, and auto-approve toggles. Newest first.
+
+Response `200` — array of `Activity`:
+```json
+[
+  { "date": "2026-08-13T14:30:00Z", "type": "rebalance",    "summary": "Rebalanced portfolio: 4 trade(s) executed, 11255 moved, est. cost $5.25." },
+  { "date": "2026-08-02T09:00:00Z", "type": "allocation",   "summary": "Updated target allocation to 35/40/20/5." },
+  { "date": "2026-07-15T11:00:00Z", "type": "threshold",    "summary": "Changed drift threshold to 4.0%." },
+  { "date": "2026-06-20T16:00:00Z", "type": "auto_approve", "summary": "Enabled auto-approve for trades under $500." }
+]
+```
+
+`type` ∈ `rebalance | threshold | allocation | auto_approve` (drives the icon map in
+`src/pages/Analytics.tsx`).
+
 ### `GET /portfolios/{id}/target-allocation` — authenticated (owner)
 
 Matches `TargetAllocation` in `src/state/portfolio.tsx`.
@@ -354,10 +373,10 @@ Risk & return metrics for `METRICS` in `src/data/portfolio.tsx`.
 Response `200`:
 ```json
 [
-  { "key": "sharpe",   "label": "Sharpe ratio",  "value": "1.34",  "gloss": "Return earned per unit of risk taken. Higher is better." },
-  { "key": "sortino",  "label": "Sortino ratio", "value": "1.87",  "gloss": "Like Sharpe, but only penalises downside volatility." },
-  { "key": "vol",      "label": "Volatility",    "value": "11.2%", "gloss": "Annualised standard deviation of monthly returns." },
-  { "key": "drawdown", "label": "Max drawdown",  "value": "-8.4%", "gloss": "Largest peak-to-trough decline in the period." }
+  { "key": "sharpe",   "label": "Sharpe ratio",  "value": "1.34", "gloss": "Return earned per unit of risk taken. Above 1 is good, above 2 very good; below 0 means it lost money." },
+  { "key": "sortino",  "label": "Sortino ratio", "value": "1.87", "gloss": "Like Sharpe, but only counts downside (loss) movements as risk. Higher means smoother gains without sharp falls." },
+  { "key": "vol",      "label": "Volatility",    "value": "11.2%", "gloss": "Annualised standard deviation of returns. Lower means a smoother ride; higher means bigger swings." },
+  { "key": "drawdown", "label": "Max drawdown",  "value": "-8.4%", "gloss": "Largest peak-to-trough decline - the worst moment from a high. Less negative means it held up better." }
 ]
 ```
 
@@ -387,6 +406,13 @@ Order: newest first.
 ### `POST /notifications/read-all` — authenticated
 
 Marks every unread notification as read (button in `Notifications.tsx`).
+
+Response `204`.
+
+### `POST /notifications/{id}/read` — authenticated
+
+Marks a single notification as read without touching the rest (click on an unread
+notification in `Notifications.tsx`).
 
 Response `204`.
 
